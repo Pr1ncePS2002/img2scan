@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DocScan — Capture</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #14141f;
+    --surface-2: #1c1c2a;
+    --border: #2a2a3e;
+    --text: #eaeaf2;
+    --text-dim: #7a7a96;
+    --accent: #3d5afe;
+    --accent-soft: rgba(61,90,254,0.15);
+    --green: #00e676;
+    --green-soft: rgba(0,230,118,0.12);
+    --amber: #ffab00;
+    --red: #ff5252;
+    --radius: 20px;
+    --font: 'DM Sans', -apple-system, sans-serif;
+    --mono: 'Space Mono', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Header ── */
+  .mobile-header {
+    padding: 20px 24px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(16px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(10,10,15,0.85);
+  }
+  .mobile-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .mobile-logo span { color: var(--accent); }
+  .mobile-logo .icon {
+    width: 34px; height: 34px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .conn-chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .conn-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+  .conn-dot.ok { background: var(--green); }
+
+  /* ── Content ── */
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    gap: 28px;
+  }
+
+  .hero-text {
+    text-align: center;
+  }
+  .hero-text h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .hero-text p {
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Capture Buttons ── */
+  .capture-area {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .capture-btn {
+    width: 100%;
+    padding: 20px;
+    border-radius: var(--radius);
+    border: 2px dashed var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .capture-btn .emoji { font-size: 28px; }
+  .capture-btn:active {
+    transform: scale(0.97);
+  }
+  .capture-btn:hover, .capture-btn:focus {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .capture-btn.primary {
+    border-style: solid;
+    border-color: var(--accent);
+    background: linear-gradient(135deg, var(--accent-soft), rgba(61,90,254,0.05));
+  }
+
+  .capture-btn input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Preview ── */
+  .preview-section {
+    display: none;
+    width: 100%;
+    max-width: 380px;
+    animation: slideUp 0.35s ease-out;
+  }
+  .preview-section.active { display: block; }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .preview-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .preview-img-wrap {
+    padding: 12px;
+    background: var(--surface-2);
+  }
+  .preview-img-wrap img {
+    width: 100%;
+    border-radius: 12px;
+    display: block;
+  }
+  .preview-actions {
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+  }
+  .preview-actions .btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+  }
+  .preview-actions .btn.send {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .preview-actions .btn:active { transform: scale(0.97); }
+
+  /* ── Status Messages ── */
+  .status-bar {
+    width: 100%;
+    max-width: 380px;
+  }
+  .status-msg {
+    padding: 14px 20px;
+    border-radius: 14px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideUp 0.3s ease-out;
+  }
+  .status-msg.success {
+    background: var(--green-soft);
+    border: 1px solid rgba(0,230,118,0.25);
+    color: var(--green);
+  }
+  .status-msg.processing {
+    background: var(--accent-soft);
+    border: 1px solid rgba(61,90,254,0.25);
+    color: var(--accent);
+  }
+  .status-msg.error {
+    background: rgba(255,82,82,0.1);
+    border: 1px solid rgba(255,82,82,0.25);
+    color: var(--red);
+  }
+
+  .mini-spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(61,90,254,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Scan Mode Toggle ── */
+  .mode-selector {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 380px;
+  }
+  .mode-opt {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .mode-opt.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="mobile-header">
+  <div class="mobile-logo">
+    <div class="icon">📄</div>
+    Doc<span>Scan</span>
+  </div>
+  <div class="conn-chip">
+    <div class="conn-dot" id="connDot"></div>
+    <span id="connText">Connecting</span>
+  </div>
+</header>
+
+<!-- Content -->
+<div class="content">
+
+  <div class="hero-text" id="heroText">
+    <h1>Capture Document</h1>
+    <p>Take a photo or upload an image of a document. It will appear on your desktop instantly.</p>
+  </div>
+
+  <!-- Mode Selector -->
+  <div class="mode-selector">
+    <button class="mode-opt active" data-mode="scan" onclick="setMode('scan', this)">B&W Scan</button>
+    <button class="mode-opt" data-mode="color" onclick="setMode('color', this)">Color</button>
+    <button class="mode-opt" data-mode="original" onclick="setMode('original', this)">Original</button>
+  </div>
+
+  <!-- Capture Buttons -->
+  <div class="capture-area" id="captureArea">
+    <label class="capture-btn primary">
+      <span class="emoji">📸</span>
+      Take Photo
+      <input type="file" accept="image/*" capture="environment" id="cameraInput">
+    </label>
+
+    <div class="divider">or</div>
+
+    <label class="capture-btn">
+      <span class="emoji">🖼</span>
+      Upload from Gallery
+      <input type="file" accept="image/*" id="galleryInput">
+    </label>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-section" id="previewSection">
+    <div class="preview-card">
+      <div class="preview-img-wrap">
+        <img id="previewImg" src="" alt="Preview">
+      </div>
+      <div class="preview-actions">
+        <button class="btn" onclick="cancelPreview()">Retake</button>
+        <button class="btn send" onclick="sendImage()">Send to Desktop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar" id="statusBar"></div>
+
+</div>
+
+<script>
+  // ── State ──
+  let ws = null;
+  let currentImageB64 = null;
+  let scanMode = 'scan';
+
+  // ── Parse session from URL ──
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session');
+
+  if (!sessionId) {
+    document.getElementById('heroText').innerHTML =
+      `<h1>Invalid Link</h1><p>Please scan the QR code from the desktop app to get a valid link.</p>`;
+    document.getElementById('captureArea').style.display = 'none';
+  } else {
+    connectWS();
+  }
+
+  function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}/ws?session=${sessionId}&role=mobile`);
+
+    ws.onopen = () => {
+      document.getElementById('connDot').classList.add('ok');
+      document.getElementById('connText').textContent = 'Connected';
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'upload_confirmed') {
+        if (data.success) {
+          showStatus('✓ Document scanned successfully!', 'success');
+        } else {
+          showStatus(data.message || 'Processing completed', 'success');
+        }
+        // Re-show capture buttons after short delay
+        setTimeout(() => {
+          cancelPreview();
+        }, 2000);
+      }
+    };
+
+    ws.onclose = () => {
+      document.getElementById('connDot').classList.remove('ok');
+      document.getElementById('connText').textContent = 'Disconnected';
+      setTimeout(connectWS, 3000);
+    };
+  }
+
+  // ── File Handlers ──
+  document.getElementById('cameraInput').addEventListener('change', handleFile);
+  document.getElementById('galleryInput').addEventListener('change', handleFile);
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Compress if needed
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        // Resize if very large (> 4000px on any side)
+        const maxDim = 3000;
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // Convert to JPEG with good quality
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        currentImageB64 = dataUrl.split(',')[1];
+
+        // Show preview
+        document.getElementById('previewImg').src = dataUrl;
+        document.getElementById('previewSection').classList.add('active');
+        document.getElementById('captureArea').style.display = 'none';
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  }
+
+  function sendImage() {
+    if (!currentImageB64 || !ws || ws.readyState !== WebSocket.OPEN) {
+      showStatus('Not connected. Please wait...', 'error');
+      return;
+    }
+
+    showStatus('Sending to desktop...', 'processing');
+
+    ws.send(JSON.stringify({
+      type: 'image_upload',
+      image: currentImageB64,
+      filename: `capture_${Date.now()}.jpg`,
+      mode: scanMode
+    }));
+
+    showStatus('Processing on desktop...', 'processing');
+  }
+
+  function cancelPreview() {
+    document.getElementById('previewSection').classList.remove('active');
+    document.getElementById('captureArea').style.display = 'flex';
+    currentImageB64 = null;
+    document.getElementById('statusBar').innerHTML = '';
+  }
+
+  function setMode(mode, btn) {
+    scanMode = mode;
+    document.querySelectorAll('.mode-opt').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function showStatus(message, type) {
+    const bar = document.getElementById('statusBar');
+    const spinner = type === 'processing' ? '<div class="mini-spinner"></div>' : '';
+    bar.innerHTML = `<div class="status-msg ${type}">${spinner} ${message}</div>`;
+  }
+</script>
+</body>
+</html>

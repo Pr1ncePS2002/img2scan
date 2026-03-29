@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocScan — Desktop Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface-2: #1a1a26;
+    --border: #2a2a3a;
+    --border-glow: #3d5afe;
+    --text: #e8e8f0;
+    --text-dim: #8888a0;
+    --accent: #3d5afe;
+    --accent-soft: rgba(61,90,254,0.12);
+    --green: #00e676;
+    --green-soft: rgba(0,230,118,0.12);
+    --amber: #ffab00;
+    --red: #ff5252;
+    --radius: 16px;
+    --font: 'DM Sans', -apple-system, sans-serif;
+    --mono: 'Space Mono', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Ambient background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(61,90,254,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(0,230,118,0.04) 0%, transparent 50%);
+    animation: ambientDrift 20s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes ambientDrift {
+    0% { transform: translate(0,0) rotate(0deg); }
+    100% { transform: translate(-5%,3%) rotate(3deg); }
+  }
+
+  /* ── Header ── */
+  .header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 40px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    background: rgba(10,10,15,0.7);
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo {
+    width: 42px;
+    height: 42px;
+    background: var(--accent);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 4px 24px rgba(61,90,254,0.3);
+  }
+  .brand {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .brand span { color: var(--accent); }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--mono);
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.connected { background: var(--green); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── Main Layout ── */
+  .main {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  /* ── QR Section ── */
+  .qr-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 32px;
+    animation: fadeUp 0.6s ease-out;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(20px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+
+  .qr-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 48px;
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 8px 60px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
+  }
+  .qr-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+  }
+
+  .qr-title {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .qr-subtitle {
+    color: var(--text-dim);
+    font-size: 15px;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+  .qr-img-wrapper {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    display: inline-block;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  .qr-img-wrapper img {
+    width: 220px;
+    height: 220px;
+    display: block;
+  }
+
+  .session-id {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    background: var(--surface-2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    word-break: break-all;
+  }
+
+  .instructions {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  /* ── Scanner Results ── */
+  .results-section {
+    display: none;
+    animation: fadeUp 0.5s ease-out;
+  }
+  .results-section.active { display: block; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .results-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .btn {
+    padding: 10px 24px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .btn.primary:hover {
+    box-shadow: 0 4px 20px rgba(61,90,254,0.4);
+  }
+  .btn.success {
+    background: var(--green-soft);
+    border-color: rgba(0,230,118,0.3);
+    color: var(--green);
+  }
+
+  .image-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+  }
+
+  .image-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .image-panel:hover {
+    border-color: var(--accent);
+  }
+  .image-panel.highlight {
+    border-color: var(--green);
+    box-shadow: 0 0 30px rgba(0,230,118,0.1);
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-label {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
+  .panel-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .panel-body {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 380px;
+    background: var(--surface-2);
+  }
+  .panel-body img {
+    max-width: 100%;
+    max-height: 380px;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .panel-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  /* ── Mode Selector ── */
+  .mode-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding: 4px;
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    width: fit-content;
+  }
+  .mode-btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 2px 12px rgba(61,90,254,0.3);
+  }
+  .mode-btn:hover:not(.active) {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+
+  /* ── Toast Notifications ── */
+  .toast-container {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    padding: 14px 24px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: slideIn 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 400px;
+  }
+  .toast.success { border-color: var(--green); }
+  .toast.info { border-color: var(--accent); }
+  .toast.warning { border-color: var(--amber); }
+  @keyframes slideIn {
+    from { transform: translateX(100px); opacity:0; }
+    to { transform: translateX(0); opacity:1; }
+  }
+
+  /* ── Loading Spinner ── */
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .processing-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10,10,15,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 10;
+    border-radius: var(--radius);
+    backdrop-filter: blur(8px);
+  }
+  .processing-text {
+    font-size: 14px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+
+  /* ── History ── */
+  .history-section {
+    margin-top: 48px;
+    display: none;
+  }
+  .history-section.active { display: block; }
+
+  .history-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .history-thumb {
+    aspect-ratio: 3/4;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .history-thumb:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .history-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .history-thumb .time-label {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    padding: 8px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-dim);
+  }
+
+  /* ── Corner Picker ── */
+  .corner-picker-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    touch-action: none;
+    user-select: none;
+  }
+  .corner-picker-container img {
+    max-width: 100%;
+    max-height: 380px;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto;
+  }
+  .corner-picker-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .corner-handle {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--green);
+    border-radius: 50%;
+    background: rgba(0, 230, 118, 0.3);
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    pointer-events: all;
+    z-index: 20;
+    transition: box-shadow 0.15s;
+    touch-action: none;
+  }
+  .corner-handle:hover, .corner-handle.dragging {
+    box-shadow: 0 0 16px rgba(0,230,118,0.6);
+    background: rgba(0, 230, 118, 0.5);
+    cursor: grabbing;
+  }
+  .corner-handle .corner-label {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--green);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Magnifier loupe */
+  .magnifier {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border: 2px solid var(--green);
+    border-radius: 50%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 30;
+    display: none;
+    box-shadow: 0 0 20px rgba(0,230,118,0.3), 0 4px 24px rgba(0,0,0,0.6);
+  }
+  .magnifier.active { display: block; }
+  .magnifier canvas {
+    width: 100%;
+    height: 100%;
+  }
+  .magnifier-crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px; height: 20px;
+    pointer-events: none;
+  }
+  .magnifier-crosshair::before,
+  .magnifier-crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255,82,82,0.8);
+  }
+  .magnifier-crosshair::before {
+    width: 1px; height: 100%;
+    left: 50%; top: 0;
+  }
+  .magnifier-crosshair::after {
+    height: 1px; width: 100%;
+    top: 50%; left: 0;
+  }
+
+  .corner-picker-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 12px 0 0;
+  }
+  .corner-picker-hint {
+    text-align: center;
+    font-size: 12px;
+    color: var(--amber);
+    font-family: var(--mono);
+    margin-bottom: 8px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 1024px) {
+    .image-grid { grid-template-columns: 1fr; }
+    .main { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo">📄</div>
+    <div class="brand">Doc<span>Scan</span></div>
+  </div>
+  <div class="status-badge">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Waiting for mobile...</span>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="main">
+
+  <!-- QR Code Section -->
+  <section class="qr-section" id="qrSection">
+    <div class="qr-card">
+      <h1 class="qr-title">Scan to Connect</h1>
+      <p class="qr-subtitle">
+        Open your phone's camera and scan this QR code to start capturing documents.
+      </p>
+      <div class="qr-img-wrapper">
+        <img id="qrImage" src="" alt="QR Code">
+      </div>
+      <div class="session-id" id="sessionDisplay">Generating session...</div>
+    </div>
+
+    <div class="instructions">
+      <div class="step">
+        <div class="step-num">1</div>
+        <span>Scan QR with your phone</span>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <span>Capture or upload a document</span>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <span>Scanned result appears here instantly</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results Section -->
+  <section class="results-section" id="resultsSection">
+    <div class="results-header">
+      <h2 class="results-title">Scan Results</h2>
+      <div style="display:flex; gap:12px;">
+        <button class="btn" onclick="showQR()">⟵ New Session</button>
+        <button class="btn success" id="downloadPdfBtn" onclick="downloadPDF()" style="display:none;">
+          ↓ Download PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Mode Selector -->
+    <div class="mode-bar" id="modeBar" style="display:none;">
+      <button class="mode-btn active" data-mode="scan" onclick="switchMode('scan', this)">B&W Scan</button>
+      <button class="mode-btn" data-mode="color" onclick="switchMode('color', this)">Color Enhanced</button>
+      <button class="mode-btn" data-mode="original" onclick="switchMode('original', this)">Original Crop</button>
+    </div>
+
+    <div class="image-grid">
+      <!-- Original -->
+      <div class="image-panel" id="originalPanel">
+        <div class="panel-header">
+          <span class="panel-label">Original</span>
+          <span class="panel-badge">FROM MOBILE</span>
+        </div>
+        <div class="panel-body" id="originalBody">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <!-- Detected Edges -->
+      <div class="image-panel" id="outlinedPanel">
+        <div class="panel-header">
+          <span class="panel-label">Detected Edges</span>
+          <span class="panel-badge">CONTOURS</span>
+        </div>
+        <div class="panel-body" id="outlinedBody">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <!-- Scanned Result -->
+      <div class="image-panel highlight" id="scannedPanel">
+        <div class="panel-header">
+          <span class="panel-label">Scanned Result</span>
+          <span class="panel-badge" id="modeBadge">B&W SCAN</span>
+        </div>
+        <div class="panel-body" id="scannedBody" style="position:relative;">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <section class="history-section" id="historySection">
+      <h3 style="font-size:18px; font-weight:700; color:var(--text-dim);">Previous Scans</h3>
+      <div class="history-grid" id="historyGrid"></div>
+    </section>
+  </section>
+
+</main>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  // ── State ──
+  let ws = null;
+  let sessionId = null;
+  let currentOriginalB64 = null;
+  let currentPdfB64 = null;
+  let scanHistory = [];
+
+  // ── Init ──
+  async function init() {
+    try {
+      const resp = await fetch('/api/session', { method: 'POST' });
+      const data = await resp.json();
+      sessionId = data.session_id;
+
+      document.getElementById('qrImage').src = 'data:image/png;base64,' + data.qr_code;
+      document.getElementById('sessionDisplay').textContent = 'Session: ' + sessionId.slice(0, 8) + '...';
+
+      connectWebSocket();
+    } catch (e) {
+      showToast('Failed to create session. Retrying...', 'warning');
+      setTimeout(init, 3000);
+    }
+  }
+
+  function connectWebSocket() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}/ws?session=${sessionId}&role=desktop`);
+
+    ws.onopen = () => {
+      showToast('Connected to server', 'info');
+      // Keepalive
+      setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 30000);
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      handleServerMessage(data);
+    };
+
+    ws.onclose = () => {
+      updateStatus('Disconnected', false);
+      showToast('Connection lost. Reconnecting...', 'warning');
+      setTimeout(connectWebSocket, 3000);
+    };
+
+    ws.onerror = () => {
+      showToast('Connection error', 'warning');
+    };
+  }
+
+  function handleServerMessage(data) {
+    switch (data.type) {
+      case 'mobile_connected':
+        updateStatus('Mobile Connected', true);
+        showToast('📱 Mobile device connected!', 'success');
+        break;
+
+      case 'mobile_disconnected':
+        updateStatus('Mobile Disconnected', false);
+        showToast('Mobile device disconnected', 'warning');
+        break;
+
+      case 'image_received':
+        showResults();
+        showToast('Image received, processing...', 'info');
+        break;
+
+      case 'processing_started':
+        showResults();
+        showProcessingState();
+        break;
+
+      case 'scan_result':
+        handleScanResult(data);
+        break;
+
+      case 'rescan_result':
+        handleRescanResult(data);
+        break;
+
+      case 'manual_crop_result':
+        handleManualCropResult(data);
+        break;
+
+      case 'pong':
+        break;
+    }
+  }
+
+  function handleScanResult(data) {
+    // Show original
+    if (data.original_b64) {
+      currentOriginalB64 = data.original_b64;
+      document.getElementById('originalBody').innerHTML =
+        `<img src="data:image/jpeg;base64,${data.original_b64}" alt="Original">`;
+    }
+
+    // Show outlined edges or manual corner picker
+    if (data.outlined_b64) {
+      document.getElementById('outlinedBody').innerHTML =
+        `<img src="data:image/jpeg;base64,${data.outlined_b64}" alt="Detected edges">`;
+    } else if (data.original_b64) {
+      // No edges detected — show manual corner picker
+      initCornerPicker(data.original_b64);
+    }
+
+    // Show scanned result
+    if (data.scanned_b64) {
+      document.getElementById('scannedBody').innerHTML =
+        `<img src="data:image/jpeg;base64,${data.scanned_b64}" alt="Scanned">`;
+    }
+
+    // Enable PDF download
+    if (data.pdf_b64) {
+      currentPdfB64 = data.pdf_b64;
+      document.getElementById('downloadPdfBtn').style.display = 'inline-flex';
+    }
+
+    // Show mode bar
+    document.getElementById('modeBar').style.display = 'flex';
+
+    // Add to history
+    if (data.scanned_b64) {
+      scanHistory.unshift({
+        scanned_b64: data.scanned_b64,
+        original_b64: data.original_b64,
+        timestamp: data.timestamp || new Date().toLocaleTimeString()
+      });
+      updateHistory();
+    }
+
+    showToast(
+      data.outlined_b64
+        ? (data.success ? '✓ Document scanned successfully!' : data.message)
+        : 'No edges detected — drag corners to mark document edges',
+      data.outlined_b64 ? (data.success ? 'success' : 'warning') : 'warning'
+    );
+  }
+
+  function handleRescanResult(data) {
+    if (data.scanned_b64) {
+      document.getElementById('scannedBody').innerHTML =
+        `<img src="data:image/jpeg;base64,${data.scanned_b64}" alt="Scanned">`;
+    }
+    if (data.pdf_b64) {
+      currentPdfB64 = data.pdf_b64;
+    }
+    const modeLabels = { scan: 'B&W SCAN', color: 'COLOR ENHANCED', original: 'ORIGINAL CROP' };
+    document.getElementById('modeBadge').textContent = modeLabels[data.mode] || 'SCAN';
+    showToast(`Re-scanned in ${data.mode} mode`, 'info');
+  }
+
+  function switchMode(mode, btn) {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if (!currentOriginalB64 || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+    // Show processing
+    document.getElementById('scannedBody').innerHTML =
+      `<div class="processing-overlay"><div class="spinner"></div><div class="processing-text">Re-scanning...</div></div>`;
+
+    ws.send(JSON.stringify({
+      type: 'rescan',
+      image: currentOriginalB64,
+      mode: mode
+    }));
+  }
+
+  function downloadPDF() {
+    if (!currentPdfB64) return;
+    const link = document.createElement('a');
+    link.href = 'data:application/pdf;base64,' + currentPdfB64;
+    link.download = `scan_${new Date().toISOString().slice(0,10)}.pdf`;
+    link.click();
+    showToast('PDF downloaded!', 'success');
+  }
+
+  function showResults() {
+    document.getElementById('qrSection').style.display = 'none';
+    document.getElementById('resultsSection').classList.add('active');
+  }
+
+  function showQR() {
+    document.getElementById('qrSection').style.display = 'flex';
+    document.getElementById('resultsSection').classList.remove('active');
+    // Reset panels
+    ['originalBody','outlinedBody','scannedBody'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div class="spinner"></div>';
+    });
+    document.getElementById('modeBar').style.display = 'none';
+    document.getElementById('downloadPdfBtn').style.display = 'none';
+    currentOriginalB64 = null;
+    currentPdfB64 = null;
+  }
+
+  function showProcessingState() {
+    ['originalBody','outlinedBody','scannedBody'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el.querySelector('img')) return; // Already has content
+      el.innerHTML = '<div class="spinner"></div>';
+    });
+  }
+
+  function updateStatus(text, connected) {
+    document.getElementById('statusText').textContent = text;
+    const dot = document.getElementById('statusDot');
+    if (connected) { dot.classList.add('connected'); }
+    else { dot.classList.remove('connected'); }
+  }
+
+  function updateHistory() {
+    const section = document.getElementById('historySection');
+    const grid = document.getElementById('historyGrid');
+    if (scanHistory.length > 1) {
+      section.classList.add('active');
+      grid.innerHTML = scanHistory.slice(1).map((item, i) => `
+        <div class="history-thumb" onclick="loadHistoryItem(${i + 1})">
+          <img src="data:image/jpeg;base64,${item.scanned_b64}" alt="Scan">
+          <div class="time-label">${item.timestamp}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  function loadHistoryItem(idx) {
+    const item = scanHistory[idx];
+    if (!item) return;
+    if (item.original_b64) {
+      document.getElementById('originalBody').innerHTML =
+        `<img src="data:image/jpeg;base64,${item.original_b64}" alt="Original">`;
+      currentOriginalB64 = item.original_b64;
+    }
+    document.getElementById('scannedBody').innerHTML =
+      `<img src="data:image/jpeg;base64,${item.scanned_b64}" alt="Scanned">`;
+  }
+
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const icons = { success: '✓', info: 'ℹ', warning: '⚠' };
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${icons[type] || ''}</span> ${message}`;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(60px)';
+      toast.style.transition = 'all 0.3s';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  // ── Manual Crop Result ──
+  function handleManualCropResult(data) {
+    if (data.scanned_b64) {
+      document.getElementById('scannedBody').innerHTML =
+        `<img src="data:image/jpeg;base64,${data.scanned_b64}" alt="Scanned">`;
+    }
+    if (data.pdf_b64) {
+      currentPdfB64 = data.pdf_b64;
+      document.getElementById('downloadPdfBtn').style.display = 'inline-flex';
+    }
+    const modeLabels = { scan: 'B&W SCAN', color: 'COLOR ENHANCED', original: 'ORIGINAL CROP' };
+    document.getElementById('modeBadge').textContent = modeLabels[data.mode] || 'SCAN';
+
+    // Add to history
+    if (data.scanned_b64) {
+      scanHistory.unshift({
+        scanned_b64: data.scanned_b64,
+        original_b64: currentOriginalB64,
+        timestamp: new Date().toLocaleTimeString()
+      });
+      updateHistory();
+    }
+
+    showToast(data.success ? '✓ Manual crop applied!' : data.message, data.success ? 'success' : 'warning');
+  }
+
+  // ── Corner Picker ──
+  let pickerState = null; // holds corner picker state
+
+  function initCornerPicker(imageB64) {
+    const container = document.getElementById('outlinedBody');
+
+    container.innerHTML = `
+      <div style="width:100%;">
+        <div class="corner-picker-hint">Drag corners to mark document edges</div>
+        <div class="corner-picker-container" id="pickerContainer">
+          <img id="pickerImage" src="data:image/jpeg;base64,${imageB64}" alt="Select corners">
+          <canvas class="corner-picker-canvas" id="pickerCanvas"></canvas>
+          <div class="magnifier" id="magnifier">
+            <canvas id="magnifierCanvas" width="240" height="240"></canvas>
+            <div class="magnifier-crosshair"></div>
+          </div>
+        </div>
+        <div class="corner-picker-actions">
+          <button class="btn primary" onclick="applyManualCrop()">Apply Crop</button>
+          <button class="btn" onclick="resetCorners()">Reset</button>
+        </div>
+      </div>
+    `;
+
+    const img = document.getElementById('pickerImage');
+    img.onload = () => {
+      setupCornerPicker(img, imageB64);
+    };
+    if (img.complete) {
+      setupCornerPicker(img, imageB64);
+    }
+  }
+
+  function setupCornerPicker(img, imageB64) {
+    const containerEl = document.getElementById('pickerContainer');
+    const canvas = document.getElementById('pickerCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Get actual rendered image position within the container
+    const imgRect = img.getBoundingClientRect();
+    const containerRect = containerEl.getBoundingClientRect();
+
+    // Image offset within container (due to margin:auto centering)
+    const offsetX = imgRect.left - containerRect.left;
+    const offsetY = imgRect.top - containerRect.top;
+
+    canvas.width = containerRect.width;
+    canvas.height = containerRect.height;
+
+    // Scale factors: displayed size -> natural size
+    const scaleX = img.naturalWidth / imgRect.width;
+    const scaleY = img.naturalHeight / imgRect.height;
+
+    // Default corners: 15% inset rectangle on the displayed image
+    const margin = 0.15;
+    const corners = [
+      { x: offsetX + imgRect.width * margin,     y: offsetY + imgRect.height * margin },      // TL
+      { x: offsetX + imgRect.width * (1-margin),  y: offsetY + imgRect.height * margin },      // TR
+      { x: offsetX + imgRect.width * (1-margin),  y: offsetY + imgRect.height * (1-margin) },  // BR
+      { x: offsetX + imgRect.width * margin,      y: offsetY + imgRect.height * (1-margin) },  // BL
+    ];
+
+    const labels = ['TL', 'TR', 'BR', 'BL'];
+
+    pickerState = {
+      corners, labels, imageB64, img, containerEl, canvas, ctx,
+      offsetX, offsetY, scaleX, scaleY,
+      imgWidth: imgRect.width, imgHeight: imgRect.height,
+      dragging: -1
+    };
+
+    // Create corner handles
+    createCornerHandles();
+    drawPolygon();
+
+    // Pointer events on container
+    containerEl.addEventListener('pointerdown', onPickerPointerDown);
+    containerEl.addEventListener('pointermove', onPickerPointerMove);
+    containerEl.addEventListener('pointerup', onPickerPointerUp);
+    containerEl.addEventListener('pointerleave', onPickerPointerUp);
+  }
+
+  function createCornerHandles() {
+    if (!pickerState) return;
+    // Remove existing handles
+    pickerState.containerEl.querySelectorAll('.corner-handle').forEach(h => h.remove());
+
+    pickerState.corners.forEach((c, i) => {
+      const handle = document.createElement('div');
+      handle.className = 'corner-handle';
+      handle.dataset.index = i;
+      handle.innerHTML = `<span class="corner-label">${pickerState.labels[i]}</span>`;
+      handle.style.left = c.x + 'px';
+      handle.style.top = c.y + 'px';
+      pickerState.containerEl.appendChild(handle);
+    });
+  }
+
+  function drawPolygon() {
+    if (!pickerState) return;
+    const { ctx, canvas, corners } = pickerState;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Fill polygon
+    ctx.beginPath();
+    ctx.moveTo(corners[0].x, corners[0].y);
+    for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0, 230, 118, 0.08)';
+    ctx.fill();
+
+    // Draw edges
+    ctx.beginPath();
+    ctx.moveTo(corners[0].x, corners[0].y);
+    for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0, 230, 118, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function onPickerPointerDown(e) {
+    if (!pickerState) return;
+    const handle = e.target.closest('.corner-handle');
+    if (!handle) return;
+
+    const idx = parseInt(handle.dataset.index);
+    pickerState.dragging = idx;
+    handle.classList.add('dragging');
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+
+    showMagnifier(e, idx);
+  }
+
+  function onPickerPointerMove(e) {
+    if (!pickerState || pickerState.dragging < 0) return;
+    e.preventDefault();
+
+    const { containerEl, corners, dragging, offsetX, offsetY, imgWidth, imgHeight } = pickerState;
+    const rect = containerEl.getBoundingClientRect();
+
+    // Clamp within image bounds
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    x = Math.max(offsetX, Math.min(offsetX + imgWidth, x));
+    y = Math.max(offsetY, Math.min(offsetY + imgHeight, y));
+
+    corners[dragging].x = x;
+    corners[dragging].y = y;
+
+    // Update handle position
+    const handle = containerEl.querySelector(`.corner-handle[data-index="${dragging}"]`);
+    if (handle) {
+      handle.style.left = x + 'px';
+      handle.style.top = y + 'px';
+    }
+
+    drawPolygon();
+    showMagnifier(e, dragging);
+  }
+
+  function onPickerPointerUp(e) {
+    if (!pickerState || pickerState.dragging < 0) return;
+    const handle = pickerState.containerEl.querySelector(`.corner-handle[data-index="${pickerState.dragging}"]`);
+    if (handle) handle.classList.remove('dragging');
+    pickerState.dragging = -1;
+    hideMagnifier();
+  }
+
+  function showMagnifier(e, cornerIdx) {
+    if (!pickerState) return;
+    const magnifier = document.getElementById('magnifier');
+    const magCanvas = document.getElementById('magnifierCanvas');
+    const magCtx = magCanvas.getContext('2d');
+    const { containerEl, corners, img, offsetX, offsetY, imgWidth, imgHeight } = pickerState;
+
+    magnifier.classList.add('active');
+
+    const rect = containerEl.getBoundingClientRect();
+    const cx = corners[cornerIdx].x;
+    const cy = corners[cornerIdx].y;
+
+    // Position magnifier offset from the corner (avoid overlapping the finger/cursor)
+    let magX = cx + 30;
+    let magY = cy - 140;
+    if (magX + 130 > rect.width) magX = cx - 150;
+    if (magY < 0) magY = cy + 30;
+    magnifier.style.left = magX + 'px';
+    magnifier.style.top = magY + 'px';
+
+    // Draw zoomed portion from the image
+    const zoom = 3;
+    const magW = magCanvas.width;
+    const magH = magCanvas.height;
+
+    // Map corner position to image-relative pixel coords
+    const imgRelX = cx - offsetX;
+    const imgRelY = cy - offsetY;
+
+    // Source coordinates in natural image
+    const sx = (imgRelX / imgWidth) * img.naturalWidth - (magW / zoom / 2);
+    const sy = (imgRelY / imgHeight) * img.naturalHeight - (magH / zoom / 2);
+    const sw = magW / zoom;
+    const sh = magH / zoom;
+
+    magCtx.clearRect(0, 0, magW, magH);
+    magCtx.drawImage(img, sx, sy, sw, sh, 0, 0, magW, magH);
+  }
+
+  function hideMagnifier() {
+    const magnifier = document.getElementById('magnifier');
+    if (magnifier) magnifier.classList.remove('active');
+  }
+
+  function resetCorners() {
+    if (!pickerState) return;
+    const { offsetX, offsetY, imgWidth, imgHeight, corners } = pickerState;
+    const margin = 0.15;
+    corners[0] = { x: offsetX + imgWidth * margin,    y: offsetY + imgHeight * margin };
+    corners[1] = { x: offsetX + imgWidth * (1-margin), y: offsetY + imgHeight * margin };
+    corners[2] = { x: offsetX + imgWidth * (1-margin), y: offsetY + imgHeight * (1-margin) };
+    corners[3] = { x: offsetX + imgWidth * margin,    y: offsetY + imgHeight * (1-margin) };
+    createCornerHandles();
+    drawPolygon();
+  }
+
+  function applyManualCrop() {
+    if (!pickerState || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+    const { corners, offsetX, offsetY, scaleX, scaleY } = pickerState;
+
+    // Convert displayed coordinates to original image coordinates
+    const naturalCorners = corners.map(c => [
+      Math.round((c.x - offsetX) * scaleX),
+      Math.round((c.y - offsetY) * scaleY)
+    ]);
+
+    // Get active scan mode
+    const activeMode = document.querySelector('.mode-btn.active');
+    const mode = activeMode ? activeMode.dataset.mode : 'scan';
+
+    // Show processing state
+    document.getElementById('scannedBody').innerHTML =
+      `<div class="processing-overlay"><div class="spinner"></div><div class="processing-text">Applying manual crop...</div></div>`;
+
+    ws.send(JSON.stringify({
+      type: 'manual_crop',
+      image: currentOriginalB64,
+      corners: naturalCorners,
+      mode: mode
+    }));
+  }
+
+  // Start
+  init();
+</script>
+</body>
+</html>
