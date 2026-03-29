@@ -598,6 +598,7 @@
   let sessionId = null;
   let currentOriginalB64 = null;
   let currentPdfB64 = null;
+  let currentCorners = null;
   let scanHistory = [];
 
   // ── Init ──
@@ -690,6 +691,11 @@
         `<img src="data:image/jpeg;base64,${data.original_b64}" alt="Original">`;
     }
 
+    // Store corners for re-use during mode switching
+    if (data.corners) {
+      currentCorners = data.corners;
+    }
+
     // Show outlined edges
     if (data.outlined_b64) {
       document.getElementById('outlinedBody').innerHTML =
@@ -723,6 +729,7 @@
       scanHistory.unshift({
         scanned_b64: data.scanned_b64,
         original_b64: data.original_b64,
+        corners: data.corners || null,
         timestamp: data.timestamp || new Date().toLocaleTimeString()
       });
       updateHistory();
@@ -754,11 +761,16 @@
     document.getElementById('scannedBody').innerHTML =
       `<div class="processing-overlay"><div class="spinner"></div><div class="processing-text">Re-scanning...</div></div>`;
 
-    ws.send(JSON.stringify({
+    const rescanMsg = {
       type: 'rescan',
       image: currentOriginalB64,
       mode: mode
-    }));
+    };
+    // Pass stored corners so server can crop correctly instead of re-detecting
+    if (currentCorners) {
+      rescanMsg.corners = currentCorners;
+    }
+    ws.send(JSON.stringify(rescanMsg));
   }
 
   function downloadPDF() {
@@ -786,6 +798,7 @@
     document.getElementById('downloadPdfBtn').style.display = 'none';
     currentOriginalB64 = null;
     currentPdfB64 = null;
+    currentCorners = null;
   }
 
   function showProcessingState() {
@@ -825,6 +838,7 @@
         `<img src="data:image/jpeg;base64,${item.original_b64}" alt="Original">`;
       currentOriginalB64 = item.original_b64;
     }
+    currentCorners = item.corners || null;
     document.getElementById('scannedBody').innerHTML =
       `<img src="data:image/jpeg;base64,${item.scanned_b64}" alt="Scanned">`;
   }

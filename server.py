@@ -201,7 +201,7 @@ async def handle_message(session_id, role, data):
                 "scanned_b64": result.get("image_b64"),
                 "outlined_b64": result.get("outlined_b64"),
                 "pdf_b64": result.get("pdf_b64"),
-                "corners": result.get("corners"),
+                "corners": corners if corners else result.get("corners"),
                 "timestamp": timestamp
             })
 
@@ -225,12 +225,22 @@ async def handle_message(session_id, role, data):
         # Desktop requests rescan with different mode
         image_b64 = data.get("image")
         mode = data.get("mode", "scan")
+        corners = data.get("corners")
         if image_b64:
             image_bytes = base64.b64decode(image_b64)
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None, scanner.scan_image_from_bytes, image_bytes, mode
-            )
+
+            if corners and len(corners) == 4:
+                # Use the stored corners from mobile for accurate cropping
+                result = await loop.run_in_executor(
+                    None, scanner.scan_with_manual_corners, image_bytes, corners, mode
+                )
+            else:
+                # No corners — fall back to auto-detection
+                result = await loop.run_in_executor(
+                    None, scanner.scan_image_from_bytes, image_bytes, mode
+                )
+
             desktop_ws = session.get("desktop")
             if desktop_ws and not desktop_ws.closed:
                 await desktop_ws.send_json({
