@@ -473,116 +473,6 @@
     color: var(--text-dim);
   }
 
-  /* ── Corner Picker ── */
-  .corner-picker-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    cursor: crosshair;
-    touch-action: none;
-    user-select: none;
-  }
-  .corner-picker-container img {
-    max-width: 100%;
-    max-height: 380px;
-    object-fit: contain;
-    border-radius: 8px;
-    display: block;
-    margin: 0 auto;
-  }
-  .corner-picker-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-  }
-  .corner-handle {
-    position: absolute;
-    width: 24px;
-    height: 24px;
-    border: 3px solid var(--green);
-    border-radius: 50%;
-    background: rgba(0, 230, 118, 0.3);
-    transform: translate(-50%, -50%);
-    cursor: grab;
-    pointer-events: all;
-    z-index: 20;
-    transition: box-shadow 0.15s;
-    touch-action: none;
-  }
-  .corner-handle:hover, .corner-handle.dragging {
-    box-shadow: 0 0 16px rgba(0,230,118,0.6);
-    background: rgba(0, 230, 118, 0.5);
-    cursor: grabbing;
-  }
-  .corner-handle .corner-label {
-    position: absolute;
-    top: -22px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 10px;
-    font-family: var(--mono);
-    color: var(--green);
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  /* Magnifier loupe */
-  .magnifier {
-    position: absolute;
-    width: 120px;
-    height: 120px;
-    border: 2px solid var(--green);
-    border-radius: 50%;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: 30;
-    display: none;
-    box-shadow: 0 0 20px rgba(0,230,118,0.3), 0 4px 24px rgba(0,0,0,0.6);
-  }
-  .magnifier.active { display: block; }
-  .magnifier canvas {
-    width: 100%;
-    height: 100%;
-  }
-  .magnifier-crosshair {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px; height: 20px;
-    pointer-events: none;
-  }
-  .magnifier-crosshair::before,
-  .magnifier-crosshair::after {
-    content: '';
-    position: absolute;
-    background: rgba(255,82,82,0.8);
-  }
-  .magnifier-crosshair::before {
-    width: 1px; height: 100%;
-    left: 50%; top: 0;
-  }
-  .magnifier-crosshair::after {
-    height: 1px; width: 100%;
-    top: 50%; left: 0;
-  }
-
-  .corner-picker-actions {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    padding: 12px 0 0;
-  }
-  .corner-picker-hint {
-    text-align: center;
-    font-size: 12px;
-    color: var(--amber);
-    font-family: var(--mono);
-    margin-bottom: 8px;
-  }
-
   /* ── Responsive ── */
   @media (max-width: 1024px) {
     .image-grid { grid-template-columns: 1fr; }
@@ -787,10 +677,6 @@
         handleRescanResult(data);
         break;
 
-      case 'manual_crop_result':
-        handleManualCropResult(data);
-        break;
-
       case 'pong':
         break;
     }
@@ -804,13 +690,17 @@
         `<img src="data:image/jpeg;base64,${data.original_b64}" alt="Original">`;
     }
 
-    // Show outlined edges or manual corner picker
+    // Show outlined edges
     if (data.outlined_b64) {
       document.getElementById('outlinedBody').innerHTML =
         `<img src="data:image/jpeg;base64,${data.outlined_b64}" alt="Detected edges">`;
-    } else if (data.original_b64) {
-      // No edges detected — show manual corner picker
-      initCornerPicker(data.original_b64);
+    } else if (data.corners) {
+      // Corners from mobile — show confirmation
+      document.getElementById('outlinedBody').innerHTML =
+        `<span style="color:var(--green); font-size:13px;">Corners selected on mobile</span>`;
+    } else {
+      document.getElementById('outlinedBody').innerHTML =
+        `<span style="color:var(--text-dim); font-size:13px;">No edges detected</span>`;
     }
 
     // Show scanned result
@@ -838,12 +728,7 @@
       updateHistory();
     }
 
-    showToast(
-      data.outlined_b64
-        ? (data.success ? '✓ Document scanned successfully!' : data.message)
-        : 'No edges detected — drag corners to mark document edges',
-      data.outlined_b64 ? (data.success ? 'success' : 'warning') : 'warning'
-    );
+    showToast(data.success ? '✓ Document scanned successfully!' : data.message, data.success ? 'success' : 'warning');
   }
 
   function handleRescanResult(data) {
@@ -957,288 +842,6 @@
       toast.style.transition = 'all 0.3s';
       setTimeout(() => toast.remove(), 300);
     }, 4000);
-  }
-
-  // ── Manual Crop Result ──
-  function handleManualCropResult(data) {
-    if (data.scanned_b64) {
-      document.getElementById('scannedBody').innerHTML =
-        `<img src="data:image/jpeg;base64,${data.scanned_b64}" alt="Scanned">`;
-    }
-    if (data.pdf_b64) {
-      currentPdfB64 = data.pdf_b64;
-      document.getElementById('downloadPdfBtn').style.display = 'inline-flex';
-    }
-    const modeLabels = { scan: 'B&W SCAN', color: 'COLOR ENHANCED', original: 'ORIGINAL CROP' };
-    document.getElementById('modeBadge').textContent = modeLabels[data.mode] || 'SCAN';
-
-    // Add to history
-    if (data.scanned_b64) {
-      scanHistory.unshift({
-        scanned_b64: data.scanned_b64,
-        original_b64: currentOriginalB64,
-        timestamp: new Date().toLocaleTimeString()
-      });
-      updateHistory();
-    }
-
-    showToast(data.success ? '✓ Manual crop applied!' : data.message, data.success ? 'success' : 'warning');
-  }
-
-  // ── Corner Picker ──
-  let pickerState = null; // holds corner picker state
-
-  function initCornerPicker(imageB64) {
-    const container = document.getElementById('outlinedBody');
-
-    container.innerHTML = `
-      <div style="width:100%;">
-        <div class="corner-picker-hint">Drag corners to mark document edges</div>
-        <div class="corner-picker-container" id="pickerContainer">
-          <img id="pickerImage" src="data:image/jpeg;base64,${imageB64}" alt="Select corners">
-          <canvas class="corner-picker-canvas" id="pickerCanvas"></canvas>
-          <div class="magnifier" id="magnifier">
-            <canvas id="magnifierCanvas" width="240" height="240"></canvas>
-            <div class="magnifier-crosshair"></div>
-          </div>
-        </div>
-        <div class="corner-picker-actions">
-          <button class="btn primary" onclick="applyManualCrop()">Apply Crop</button>
-          <button class="btn" onclick="resetCorners()">Reset</button>
-        </div>
-      </div>
-    `;
-
-    const img = document.getElementById('pickerImage');
-    img.onload = () => {
-      setupCornerPicker(img, imageB64);
-    };
-    if (img.complete) {
-      setupCornerPicker(img, imageB64);
-    }
-  }
-
-  function setupCornerPicker(img, imageB64) {
-    const containerEl = document.getElementById('pickerContainer');
-    const canvas = document.getElementById('pickerCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // Get actual rendered image position within the container
-    const imgRect = img.getBoundingClientRect();
-    const containerRect = containerEl.getBoundingClientRect();
-
-    // Image offset within container (due to margin:auto centering)
-    const offsetX = imgRect.left - containerRect.left;
-    const offsetY = imgRect.top - containerRect.top;
-
-    canvas.width = containerRect.width;
-    canvas.height = containerRect.height;
-
-    // Scale factors: displayed size -> natural size
-    const scaleX = img.naturalWidth / imgRect.width;
-    const scaleY = img.naturalHeight / imgRect.height;
-
-    // Default corners: 15% inset rectangle on the displayed image
-    const margin = 0.15;
-    const corners = [
-      { x: offsetX + imgRect.width * margin,     y: offsetY + imgRect.height * margin },      // TL
-      { x: offsetX + imgRect.width * (1-margin),  y: offsetY + imgRect.height * margin },      // TR
-      { x: offsetX + imgRect.width * (1-margin),  y: offsetY + imgRect.height * (1-margin) },  // BR
-      { x: offsetX + imgRect.width * margin,      y: offsetY + imgRect.height * (1-margin) },  // BL
-    ];
-
-    const labels = ['TL', 'TR', 'BR', 'BL'];
-
-    pickerState = {
-      corners, labels, imageB64, img, containerEl, canvas, ctx,
-      offsetX, offsetY, scaleX, scaleY,
-      imgWidth: imgRect.width, imgHeight: imgRect.height,
-      dragging: -1
-    };
-
-    // Create corner handles
-    createCornerHandles();
-    drawPolygon();
-
-    // Pointer events on container
-    containerEl.addEventListener('pointerdown', onPickerPointerDown);
-    containerEl.addEventListener('pointermove', onPickerPointerMove);
-    containerEl.addEventListener('pointerup', onPickerPointerUp);
-    containerEl.addEventListener('pointerleave', onPickerPointerUp);
-  }
-
-  function createCornerHandles() {
-    if (!pickerState) return;
-    // Remove existing handles
-    pickerState.containerEl.querySelectorAll('.corner-handle').forEach(h => h.remove());
-
-    pickerState.corners.forEach((c, i) => {
-      const handle = document.createElement('div');
-      handle.className = 'corner-handle';
-      handle.dataset.index = i;
-      handle.innerHTML = `<span class="corner-label">${pickerState.labels[i]}</span>`;
-      handle.style.left = c.x + 'px';
-      handle.style.top = c.y + 'px';
-      pickerState.containerEl.appendChild(handle);
-    });
-  }
-
-  function drawPolygon() {
-    if (!pickerState) return;
-    const { ctx, canvas, corners } = pickerState;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Fill polygon
-    ctx.beginPath();
-    ctx.moveTo(corners[0].x, corners[0].y);
-    for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(0, 230, 118, 0.08)';
-    ctx.fill();
-
-    // Draw edges
-    ctx.beginPath();
-    ctx.moveTo(corners[0].x, corners[0].y);
-    for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
-    ctx.closePath();
-    ctx.strokeStyle = 'rgba(0, 230, 118, 0.7)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  function onPickerPointerDown(e) {
-    if (!pickerState) return;
-    const handle = e.target.closest('.corner-handle');
-    if (!handle) return;
-
-    const idx = parseInt(handle.dataset.index);
-    pickerState.dragging = idx;
-    handle.classList.add('dragging');
-    handle.setPointerCapture(e.pointerId);
-    e.preventDefault();
-
-    showMagnifier(e, idx);
-  }
-
-  function onPickerPointerMove(e) {
-    if (!pickerState || pickerState.dragging < 0) return;
-    e.preventDefault();
-
-    const { containerEl, corners, dragging, offsetX, offsetY, imgWidth, imgHeight } = pickerState;
-    const rect = containerEl.getBoundingClientRect();
-
-    // Clamp within image bounds
-    let x = e.clientX - rect.left;
-    let y = e.clientY - rect.top;
-    x = Math.max(offsetX, Math.min(offsetX + imgWidth, x));
-    y = Math.max(offsetY, Math.min(offsetY + imgHeight, y));
-
-    corners[dragging].x = x;
-    corners[dragging].y = y;
-
-    // Update handle position
-    const handle = containerEl.querySelector(`.corner-handle[data-index="${dragging}"]`);
-    if (handle) {
-      handle.style.left = x + 'px';
-      handle.style.top = y + 'px';
-    }
-
-    drawPolygon();
-    showMagnifier(e, dragging);
-  }
-
-  function onPickerPointerUp(e) {
-    if (!pickerState || pickerState.dragging < 0) return;
-    const handle = pickerState.containerEl.querySelector(`.corner-handle[data-index="${pickerState.dragging}"]`);
-    if (handle) handle.classList.remove('dragging');
-    pickerState.dragging = -1;
-    hideMagnifier();
-  }
-
-  function showMagnifier(e, cornerIdx) {
-    if (!pickerState) return;
-    const magnifier = document.getElementById('magnifier');
-    const magCanvas = document.getElementById('magnifierCanvas');
-    const magCtx = magCanvas.getContext('2d');
-    const { containerEl, corners, img, offsetX, offsetY, imgWidth, imgHeight } = pickerState;
-
-    magnifier.classList.add('active');
-
-    const rect = containerEl.getBoundingClientRect();
-    const cx = corners[cornerIdx].x;
-    const cy = corners[cornerIdx].y;
-
-    // Position magnifier offset from the corner (avoid overlapping the finger/cursor)
-    let magX = cx + 30;
-    let magY = cy - 140;
-    if (magX + 130 > rect.width) magX = cx - 150;
-    if (magY < 0) magY = cy + 30;
-    magnifier.style.left = magX + 'px';
-    magnifier.style.top = magY + 'px';
-
-    // Draw zoomed portion from the image
-    const zoom = 3;
-    const magW = magCanvas.width;
-    const magH = magCanvas.height;
-
-    // Map corner position to image-relative pixel coords
-    const imgRelX = cx - offsetX;
-    const imgRelY = cy - offsetY;
-
-    // Source coordinates in natural image
-    const sx = (imgRelX / imgWidth) * img.naturalWidth - (magW / zoom / 2);
-    const sy = (imgRelY / imgHeight) * img.naturalHeight - (magH / zoom / 2);
-    const sw = magW / zoom;
-    const sh = magH / zoom;
-
-    magCtx.clearRect(0, 0, magW, magH);
-    magCtx.drawImage(img, sx, sy, sw, sh, 0, 0, magW, magH);
-  }
-
-  function hideMagnifier() {
-    const magnifier = document.getElementById('magnifier');
-    if (magnifier) magnifier.classList.remove('active');
-  }
-
-  function resetCorners() {
-    if (!pickerState) return;
-    const { offsetX, offsetY, imgWidth, imgHeight, corners } = pickerState;
-    const margin = 0.15;
-    corners[0] = { x: offsetX + imgWidth * margin,    y: offsetY + imgHeight * margin };
-    corners[1] = { x: offsetX + imgWidth * (1-margin), y: offsetY + imgHeight * margin };
-    corners[2] = { x: offsetX + imgWidth * (1-margin), y: offsetY + imgHeight * (1-margin) };
-    corners[3] = { x: offsetX + imgWidth * margin,    y: offsetY + imgHeight * (1-margin) };
-    createCornerHandles();
-    drawPolygon();
-  }
-
-  function applyManualCrop() {
-    if (!pickerState || !ws || ws.readyState !== WebSocket.OPEN) return;
-
-    const { corners, offsetX, offsetY, scaleX, scaleY } = pickerState;
-
-    // Convert displayed coordinates to original image coordinates
-    const naturalCorners = corners.map(c => [
-      Math.round((c.x - offsetX) * scaleX),
-      Math.round((c.y - offsetY) * scaleY)
-    ]);
-
-    // Get active scan mode
-    const activeMode = document.querySelector('.mode-btn.active');
-    const mode = activeMode ? activeMode.dataset.mode : 'scan';
-
-    // Show processing state
-    document.getElementById('scannedBody').innerHTML =
-      `<div class="processing-overlay"><div class="spinner"></div><div class="processing-text">Applying manual crop...</div></div>`;
-
-    ws.send(JSON.stringify({
-      type: 'manual_crop',
-      image: currentOriginalB64,
-      corners: naturalCorners,
-      mode: mode
-    }));
   }
 
   // Start

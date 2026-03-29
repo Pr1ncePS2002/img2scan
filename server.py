@@ -178,9 +178,18 @@ async def handle_message(session_id, role, data):
         # Run scanner in thread pool to not block event loop
         loop = asyncio.get_event_loop()
         scan_mode = data.get("mode", "scan")
-        result = await loop.run_in_executor(
-            None, scanner.scan_image_from_bytes, image_bytes, scan_mode
-        )
+        corners = data.get("corners")  # Manual corners from mobile
+
+        if corners and len(corners) == 4:
+            # User selected corners on mobile — use them directly
+            result = await loop.run_in_executor(
+                None, scanner.scan_with_manual_corners, image_bytes, corners, scan_mode
+            )
+        else:
+            # Auto-detect edges
+            result = await loop.run_in_executor(
+                None, scanner.scan_image_from_bytes, image_bytes, scan_mode
+            )
 
         # Send result to desktop
         if desktop_ws and not desktop_ws.closed:
@@ -226,28 +235,6 @@ async def handle_message(session_id, role, data):
             if desktop_ws and not desktop_ws.closed:
                 await desktop_ws.send_json({
                     "type": "rescan_result",
-                    "success": result["success"],
-                    "message": result["message"],
-                    "scanned_b64": result.get("image_b64"),
-                    "pdf_b64": result.get("pdf_b64"),
-                    "mode": mode
-                })
-
-    elif msg_type == "manual_crop":
-        # Desktop sends manually selected corners for cropping
-        image_b64 = data.get("image")
-        corners = data.get("corners")  # [[x,y], [x,y], [x,y], [x,y]]
-        mode = data.get("mode", "scan")
-        if image_b64 and corners and len(corners) == 4:
-            image_bytes = base64.b64decode(image_b64)
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None, scanner.scan_with_manual_corners, image_bytes, corners, mode
-            )
-            desktop_ws = session.get("desktop")
-            if desktop_ws and not desktop_ws.closed:
-                await desktop_ws.send_json({
-                    "type": "manual_crop_result",
                     "success": result["success"],
                     "message": result["message"],
                     "scanned_b64": result.get("image_b64"),
