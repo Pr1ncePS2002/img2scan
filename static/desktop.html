@@ -272,7 +272,7 @@
 
   .image-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 24px;
   }
 
@@ -335,39 +335,6 @@
     display: flex;
     gap: 8px;
     justify-content: flex-end;
-  }
-
-  /* ── Mode Selector ── */
-  .mode-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 24px;
-    padding: 4px;
-    background: var(--surface);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    width: fit-content;
-  }
-  .mode-btn {
-    padding: 8px 20px;
-    border-radius: 8px;
-    border: none;
-    background: transparent;
-    color: var(--text-dim);
-    font-family: var(--font);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .mode-btn.active {
-    background: var(--accent);
-    color: white;
-    box-shadow: 0 2px 12px rgba(61,90,254,0.3);
-  }
-  .mode-btn:hover:not(.active) {
-    color: var(--text);
-    background: var(--surface-2);
   }
 
   /* ── Toast Notifications ── */
@@ -538,13 +505,6 @@
       </div>
     </div>
 
-    <!-- Mode Selector -->
-    <div class="mode-bar" id="modeBar" style="display:none;">
-      <button class="mode-btn active" data-mode="scan" onclick="switchMode('scan', this)">B&W Scan</button>
-      <button class="mode-btn" data-mode="color" onclick="switchMode('color', this)">Color Enhanced</button>
-      <button class="mode-btn" data-mode="original" onclick="switchMode('original', this)">Original Crop</button>
-    </div>
-
     <div class="image-grid">
       <!-- Original -->
       <div class="image-panel" id="originalPanel">
@@ -557,22 +517,11 @@
         </div>
       </div>
 
-      <!-- Detected Edges -->
-      <div class="image-panel" id="outlinedPanel">
-        <div class="panel-header">
-          <span class="panel-label">Detected Edges</span>
-          <span class="panel-badge">CONTOURS</span>
-        </div>
-        <div class="panel-body" id="outlinedBody">
-          <div class="spinner"></div>
-        </div>
-      </div>
-
-      <!-- Scanned Result -->
+      <!-- Cropped Result -->
       <div class="image-panel highlight" id="scannedPanel">
         <div class="panel-header">
-          <span class="panel-label">Scanned Result</span>
-          <span class="panel-badge" id="modeBadge">B&W SCAN</span>
+          <span class="panel-label">Cropped Result</span>
+          <span class="panel-badge">PERSPECTIVE CORRECTED</span>
         </div>
         <div class="panel-body" id="scannedBody" style="position:relative;">
           <div class="spinner"></div>
@@ -674,57 +623,32 @@
         handleScanResult(data);
         break;
 
-      case 'rescan_result':
-        handleRescanResult(data);
-        break;
-
       case 'pong':
         break;
     }
   }
 
   function handleScanResult(data) {
-    // Show original
     if (data.original_b64) {
       currentOriginalB64 = data.original_b64;
       document.getElementById('originalBody').innerHTML =
         `<img src="data:image/jpeg;base64,${data.original_b64}" alt="Original">`;
     }
 
-    // Store corners for re-use during mode switching
     if (data.corners) {
       currentCorners = data.corners;
     }
 
-    // Show outlined edges
-    if (data.outlined_b64) {
-      document.getElementById('outlinedBody').innerHTML =
-        `<img src="data:image/jpeg;base64,${data.outlined_b64}" alt="Detected edges">`;
-    } else if (data.corners) {
-      // Corners from mobile — show confirmation
-      document.getElementById('outlinedBody').innerHTML =
-        `<span style="color:var(--green); font-size:13px;">Corners selected on mobile</span>`;
-    } else {
-      document.getElementById('outlinedBody').innerHTML =
-        `<span style="color:var(--text-dim); font-size:13px;">No edges detected</span>`;
-    }
-
-    // Show scanned result
     if (data.scanned_b64) {
       document.getElementById('scannedBody').innerHTML =
-        `<img src="data:image/jpeg;base64,${data.scanned_b64}" alt="Scanned">`;
+        `<img src="data:image/jpeg;base64,${data.scanned_b64}" alt="Cropped">`;
     }
 
-    // Enable PDF download
     if (data.pdf_b64) {
       currentPdfB64 = data.pdf_b64;
       document.getElementById('downloadPdfBtn').style.display = 'inline-flex';
     }
 
-    // Show mode bar
-    document.getElementById('modeBar').style.display = 'flex';
-
-    // Add to history
     if (data.scanned_b64) {
       scanHistory.unshift({
         scanned_b64: data.scanned_b64,
@@ -735,42 +659,7 @@
       updateHistory();
     }
 
-    showToast(data.success ? '✓ Document scanned successfully!' : data.message, data.success ? 'success' : 'warning');
-  }
-
-  function handleRescanResult(data) {
-    if (data.scanned_b64) {
-      document.getElementById('scannedBody').innerHTML =
-        `<img src="data:image/jpeg;base64,${data.scanned_b64}" alt="Scanned">`;
-    }
-    if (data.pdf_b64) {
-      currentPdfB64 = data.pdf_b64;
-    }
-    const modeLabels = { scan: 'B&W SCAN', color: 'COLOR ENHANCED', original: 'ORIGINAL CROP' };
-    document.getElementById('modeBadge').textContent = modeLabels[data.mode] || 'SCAN';
-    showToast(`Re-scanned in ${data.mode} mode`, 'info');
-  }
-
-  function switchMode(mode, btn) {
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    if (!currentOriginalB64 || !ws || ws.readyState !== WebSocket.OPEN) return;
-
-    // Show processing
-    document.getElementById('scannedBody').innerHTML =
-      `<div class="processing-overlay"><div class="spinner"></div><div class="processing-text">Re-scanning...</div></div>`;
-
-    const rescanMsg = {
-      type: 'rescan',
-      image: currentOriginalB64,
-      mode: mode
-    };
-    // Pass stored corners so server can crop correctly instead of re-detecting
-    if (currentCorners) {
-      rescanMsg.corners = currentCorners;
-    }
-    ws.send(JSON.stringify(rescanMsg));
+    showToast(data.success ? '✓ Document cropped successfully!' : data.message, data.success ? 'success' : 'warning');
   }
 
   function downloadPDF() {
@@ -791,10 +680,9 @@
     document.getElementById('qrSection').style.display = 'flex';
     document.getElementById('resultsSection').classList.remove('active');
     // Reset panels
-    ['originalBody','outlinedBody','scannedBody'].forEach(id => {
+    ['originalBody','scannedBody'].forEach(id => {
       document.getElementById(id).innerHTML = '<div class="spinner"></div>';
     });
-    document.getElementById('modeBar').style.display = 'none';
     document.getElementById('downloadPdfBtn').style.display = 'none';
     currentOriginalB64 = null;
     currentPdfB64 = null;
@@ -802,9 +690,9 @@
   }
 
   function showProcessingState() {
-    ['originalBody','outlinedBody','scannedBody'].forEach(id => {
+    ['originalBody','scannedBody'].forEach(id => {
       const el = document.getElementById(id);
-      if (el.querySelector('img')) return; // Already has content
+      if (el.querySelector('img')) return;
       el.innerHTML = '<div class="spinner"></div>';
     });
   }

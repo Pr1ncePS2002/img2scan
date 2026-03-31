@@ -177,18 +177,17 @@ async def handle_message(session_id, role, data):
 
         # Run scanner in thread pool to not block event loop
         loop = asyncio.get_event_loop()
-        scan_mode = data.get("mode", "scan")
         corners = data.get("corners")  # Manual corners from mobile
 
         if corners and len(corners) == 4:
             # User selected corners on mobile — use them directly
             result = await loop.run_in_executor(
-                None, scanner.scan_with_manual_corners, image_bytes, corners, scan_mode
+                None, scanner.scan_with_manual_corners, image_bytes, corners, "original"
             )
         else:
             # Auto-detect edges
             result = await loop.run_in_executor(
-                None, scanner.scan_image_from_bytes, image_bytes, scan_mode
+                None, scanner.scan_image_from_bytes, image_bytes, "original"
             )
 
         # Send result to desktop
@@ -222,23 +221,19 @@ async def handle_message(session_id, role, data):
             })
 
     elif msg_type == "rescan":
-        # Desktop requests rescan with different mode
         image_b64 = data.get("image")
-        mode = data.get("mode", "scan")
         corners = data.get("corners")
         if image_b64:
             image_bytes = base64.b64decode(image_b64)
             loop = asyncio.get_event_loop()
 
             if corners and len(corners) == 4:
-                # Use the stored corners from mobile for accurate cropping
                 result = await loop.run_in_executor(
-                    None, scanner.scan_with_manual_corners, image_bytes, corners, mode
+                    None, scanner.scan_with_manual_corners, image_bytes, corners, "original"
                 )
             else:
-                # No corners — fall back to auto-detection
                 result = await loop.run_in_executor(
-                    None, scanner.scan_image_from_bytes, image_bytes, mode
+                    None, scanner.scan_image_from_bytes, image_bytes, "original"
                 )
 
             desktop_ws = session.get("desktop")
@@ -248,8 +243,7 @@ async def handle_message(session_id, role, data):
                     "success": result["success"],
                     "message": result["message"],
                     "scanned_b64": result.get("image_b64"),
-                    "pdf_b64": result.get("pdf_b64"),
-                    "mode": mode
+                    "pdf_b64": result.get("pdf_b64")
                 })
 
     elif msg_type == "ping":

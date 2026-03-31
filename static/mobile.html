@@ -175,33 +175,6 @@
     background: var(--border);
   }
 
-  /* ── Mode Selector ── */
-  .mode-selector {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-    max-width: 380px;
-  }
-  .mode-opt {
-    flex: 1;
-    padding: 10px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text-dim);
-    font-family: var(--font);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
-  }
-  .mode-opt.active {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-
   /* ── Corner Selection Screen ── */
   .crop-screen {
     position: relative;
@@ -428,12 +401,6 @@
       <p>Take a photo or upload an image of a document. You'll mark the edges before sending.</p>
     </div>
 
-    <div class="mode-selector">
-      <button class="mode-opt active" data-mode="scan" onclick="setMode('scan', this)">B&W Scan</button>
-      <button class="mode-opt" data-mode="color" onclick="setMode('color', this)">Color</button>
-      <button class="mode-opt" data-mode="original" onclick="setMode('original', this)">Original</button>
-    </div>
-
     <div class="capture-area" id="captureArea">
       <label class="capture-btn primary">
         <span class="emoji">📸</span>
@@ -490,7 +457,7 @@
   // ── State ──
   let ws = null;
   let currentImageB64 = null;
-  let scanMode = 'scan';
+  let scanMode = 'original';
 
   // Corner picker state
   let cropState = null;
@@ -827,12 +794,6 @@
   }
 
   // ── Helpers ──
-  function setMode(mode, btn) {
-    scanMode = mode;
-    document.querySelectorAll('.mode-opt').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  }
-
   function showStatus(message, type) {
     const bar = document.getElementById('statusBar');
     const spinner = type === 'processing' ? '<div class="mini-spinner"></div>' : '';
